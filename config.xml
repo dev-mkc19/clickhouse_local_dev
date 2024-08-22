@@ -27,15 +27,17 @@
     <path>/var/lib/clickhouse/</path>
     <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
     <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <access_control_path>/var/lib/clickhouse/</access_control_path>
 
     <users_config>users.xml</users_config>
     <default_profile>default</default_profile>
     <default_database>default</default_database>
     <timezone>Europe/Moscow</timezone>
     <mlock_executable>false</mlock_executable>
+    <default_replica_path>/clickhouse/tables/{uuid}/{shard}</default_replica_path>
 
     <remote_servers>
-        <company_cluster>
+        <cluster_name>
             <shard>
                 <replica>
                     <host>clickhouse01</host>
@@ -45,18 +47,12 @@
                     <host>clickhouse02</host>
                     <port>9000</port>
                 </replica>
-            </shard>
-            <shard>
                 <replica>
                     <host>clickhouse03</host>
                     <port>9000</port>
                 </replica>
-                <replica>
-                    <host>clickhouse04</host>
-                    <port>9000</port>
-                </replica>
             </shard>
-        </company_cluster>
+        </cluster_name>
     </remote_servers>
 
     <zookeeper>
@@ -67,7 +63,7 @@
     </zookeeper>
 
     <macros>
-        <cluster>company_cluster</cluster>
+        <cluster_name>cluster_name</cluster_name>
         <shard>${SHARD}</shard>
         <replica>clickhouse${REPLICA}</replica>
     </macros>
