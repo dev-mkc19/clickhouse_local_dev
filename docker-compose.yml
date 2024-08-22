@@ -1,4 +1,12 @@
 version: '3.5'
+
+x-clickhouse-common:
+  &clickhouse-common
+  image: clickhouse_python_dbt:latest
+  env_file: .env
+  volumes: 
+    - &commmon_volume ${MOUNT_DBT_PROJECT_DIR}:/opt/dbt/
+
 services:
   zookeeper:
     image: zookeeper:3.7
@@ -7,8 +15,9 @@ services:
     networks:
       clickhouse-network:
         ipv4_address: 172.23.0.10
+  
   clickhouse01:
-    image: clickhouse/clickhouse-server:22.5
+    <<: *clickhouse-common
     container_name: clickhouse01
     hostname: clickhouse01
     networks:
@@ -18,40 +27,32 @@ services:
       - "127.0.0.1:8123:8123"
       - "127.0.0.1:9000:9000"
     volumes:
+      - *commmon_volume
       - ${PWD}/clickhouse01:/etc/clickhouse-server
     depends_on:
       - zookeeper
   clickhouse02:
-    image: clickhouse/clickhouse-server:22.5
+    <<: *clickhouse-common
     container_name: clickhouse02
     hostname: clickhouse02
     networks:
       clickhouse-network:
         ipv4_address: 172.23.0.12
     volumes:
+      - *commmon_volume
       - ${PWD}/clickhouse02:/etc/clickhouse-server
     depends_on:
       - zookeeper
   clickhouse03:
-    image: clickhouse/clickhouse-server:22.5
+    <<: *clickhouse-common
     container_name: clickhouse03
     hostname: clickhouse03
     networks:
       clickhouse-network:
         ipv4_address: 172.23.0.13
     volumes:
+      - *commmon_volume
       - ${PWD}/clickhouse03:/etc/clickhouse-server
-    depends_on:
-      - zookeeper
-  clickhouse04:
-    image: clickhouse/clickhouse-server:22.5
-    container_name: clickhouse04
-    hostname: clickhouse04
-    networks:
-      clickhouse-network:
-        ipv4_address: 172.23.0.14
-    volumes:
-      - ${PWD}/clickhouse04:/etc/clickhouse-server
     depends_on:
       - zookeeper
 
