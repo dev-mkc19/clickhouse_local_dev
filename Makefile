@@ -19,8 +19,13 @@ prepare:
 up: prepare
 	docker-compose up -d
 
-.PHONY: start
-start:
+.PHONY: migrate
+migrate:
+	docker cp ./migration.sh clickhouse01:/opt/dbt
+	docker exec clickhouse01 chmod +x /opt/dbt/migration.sh
+	docker exec clickhouse01 sh /opt/dbt/migration.sh
+
+.PHONY: start 
 start: config up
 	docker-compose start
 

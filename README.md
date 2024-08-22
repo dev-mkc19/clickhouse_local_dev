@@ -1,14 +1,28 @@
 # Clickhouse Cluster
 
 Clickhouse cluster with 1 shards and 3 replicas built with docker-compose. Includes custom dbt-clickhouse adapter.
+It has aim to easely set ap sandbox for developing DBT project.
 
 > [!warn]
 > Not for production use.
 
+## Configuration
+
+1. Add credentials to `.env` for approptiate ENV VARS
+    - **CLICKHOUSE_SCR_HOST** - credentials for source Clickhouse cluster which will be used as template fow sandbox.
+    - **CLICKHOUSE_SCR_PORT** - credentials for source Clickhouse cluster which will be used as template fow sandbox.
+    - **CLICKHOUSE_SCR_USER** - credentials for source Clickhouse cluster which will be used as template fow sandbox.
+    - **CLICKHOUSE_SCR_PASSWORD** - credentials for source Clickhouse cluster which will be used as template fow sandbox.
+    - **DBT_USER** - user wich will be used in profiles.yaml
+    - **DBT_PASSWORD** - user wich will be used in profiles.yaml
+    - **MOUNT_DBT_PROJECT_DIR** - an absolute path to local DBT project
+2. Switch on tech VPN
+
+
 ## Run
 
 Run single command, and it will copy configs for each node and
-run clickhouse cluster `cluster_name` with docker-compose
+run empty clickhouse cluster `cluster_name` with docker-compose
 ```sh
 make start
 ```
@@ -22,10 +36,28 @@ Containers will be available in docker network `172.23.0.0/24`
 | clickhouse02 | 172.23.0.12
 | clickhouse03 | 172.23.0.13
 
+
+Run single command, and it will copy migration.sh script inside a docker compose and run it.
+After that script will re-create database structure as it was in Clickhouse source system with the sample data
+of each source table in DBT project (~100 rows)
+```sh
+make migrate
+```
+
+> [!info]
+> You can rewrite executing DBT_SOURCES var in `migration.sh` script by adding `--select <add selection>` attribute
+> and it will reduce a number of source tables used for re-creation.
+
+
+Now you are ready to use sandbox. Return to your local BDT project an run `dbt run-operation create_udfs -t dev`
+it will create nessessary function. Done. Enjoy you dev process.
+
+
 ## Profiles
 
 - `default` - no password
 - `admin` - password `123`
+- `airflow` - password
 
 ## Test it
 
