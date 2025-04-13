@@ -1,13 +1,17 @@
 .PHONY: config
 config:
 	rm -rf clickhouse01 clickhouse02 clickhouse03
-	mkdir -p clickhouse01 clickhouse02 clickhouse03
-	REPLICA=01 SHARD=01 envsubst < config.xml > clickhouse01/config.xml
-	REPLICA=02 SHARD=01 envsubst < config.xml > clickhouse02/config.xml
-	REPLICA=03 SHARD=01 envsubst < config.xml > clickhouse03/config.xml
-	cp users.xml clickhouse01/users.xml
-	cp users.xml clickhouse02/users.xml
-	cp users.xml clickhouse03/users.xml
+	mkdir -p clickhouse01/config.d clickhouse02/config.d clickhouse03/config.d
+	mkdir -p clickhouse01/users.d clickhouse02/users.d clickhouse03/users.d
+	REPLICA=01 SHARD=01 envsubst < config.yaml > clickhouse01/config.d/config.yaml
+	REPLICA=02 SHARD=01 envsubst < config.yaml > clickhouse02/config.d/config.yaml
+	REPLICA=03 SHARD=01 envsubst < config.yaml > clickhouse03/config.d/config.yaml
+	DBT_USER=${DBT_USER} DBT_PASSWORD=${DBT_PASSWORD} envsubst < users.yaml > clickhouse01/users.d/users.yaml
+	DBT_USER=${DBT_USER} DBT_PASSWORD=${DBT_PASSWORD} envsubst < users.yaml > clickhouse02/users.d/users.yaml
+	DBT_USER=${DBT_USER} DBT_PASSWORD=${DBT_PASSWORD} envsubst < users.yaml > clickhouse03/users.d/users.yaml
+	# cp users.yaml clickhouse01/users.d/users.yaml
+	# cp users.yaml clickhouse02/users.d/users.yaml
+	# cp users.yaml clickhouse03/users.d/users.yaml
 
 
 .PHONY: prepare
@@ -36,3 +40,4 @@ stop:
 .PHONY: down
 down: stop
 	docker-compose down
+	rm -rf clickhouse01 clickhouse02 clickhouse03

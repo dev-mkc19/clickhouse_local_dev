@@ -1,5 +1,3 @@
-version: '3.5'
-
 x-clickhouse-common:
   &clickhouse-common
   image: clickhouse_python_dbt:latest
@@ -28,7 +26,8 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - *commmon_volume
-      - ${PWD}/clickhouse01:/etc/clickhouse-server
+      - ${PWD}/clickhouse01/config.d/:/etc/clickhouse-server/config.d/
+      - ${PWD}/clickhouse01/users.d/:/etc/clickhouse-server/users.d/
     depends_on:
       - zookeeper
   clickhouse02:
@@ -40,7 +39,8 @@ services:
         ipv4_address: 172.23.0.12
     volumes:
       - *commmon_volume
-      - ${PWD}/clickhouse02:/etc/clickhouse-server
+      - ${PWD}/clickhouse02/config.d/:/etc/clickhouse-server/config.d/
+      - ${PWD}/clickhouse02/users.d/:/etc/clickhouse-server/users.d/
     depends_on:
       - zookeeper
   clickhouse03:
@@ -52,7 +52,8 @@ services:
         ipv4_address: 172.23.0.13
     volumes:
       - *commmon_volume
-      - ${PWD}/clickhouse03:/etc/clickhouse-server
+      - ${PWD}/clickhouse03/config.d/:/etc/clickhouse-server/config.d/
+      - ${PWD}/clickhouse03/users.d/:/etc/clickhouse-server/users.d/
     depends_on:
       - zookeeper
 
