@@ -1,0 +1,174 @@
+services:
+
+  # ============================================================
+  # KAFKA ZOOKEEPER
+  # ============================================================
+  zookeeper-kafka:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: zookeeper-kafka
+    hostname: zookeeper-kafka
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.20
+
+  # ============================================================
+  # KAFKA SCRAM INIT
+  #
+  # Создаёт SCRAM-SHA-256 пользователя clickhouse в ZooKeeper.
+  # Контейнер выполняется один раз и завершается.
+  # ============================================================
+  kafka-init:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka-init
+    hostname: kafka-init
+    depends_on:
+      - zookeeper-kafka
+    restart: "no"
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.24
+    entrypoint:
+      - /bin/bash
+      - -c
+    command:
+      - |
+        echo "Waiting for ZooKeeper..."
+        cub zk-ready zookeeper-kafka:2181 30
+        echo "Creating SCRAM user: clickhouse"
+        kafka-configs \
+          --zookeeper zookeeper-kafka:2181 \
+          --alter \
+          --add-config 'SCRAM-SHA-256=[iterations=8192,password=clickhouse-secret]' \
+          --entity-type users \
+          --entity-name clickhouse
+
+        echo "SCRAM users:"
+        kafka-configs \
+          --zookeeper zookeeper-kafka:2181 \
+          --describe \
+          --entity-type users
+        echo "Kafka SCRAM initialization completed."
+
+  # ============================================================
+  # KAFKA
+  # ============================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka
+    hostname: kafka
+    depends_on:
+      zookeeper-kafka:
+        condition: service_started
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "29093:29093"
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.21
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-kafka:2181
+      # --------------------------------------------------------
+      # LISTENERS
+      # --------------------------------------------------------
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >-
+        INTERNAL:PLAINTEXT,
+        CLIENT:SASL_PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: >-
+        INTERNAL://0.0.0.0:29092,
+        CLIENT://0.0.0.0:29093,
+        EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: >-
+        INTERNAL://kafka:29092,
+        CLIENT://kafka:29093,
+        EXTERNAL://127.0.0.1:9092
+      # Broker-to-broker communication.
+      # Для локального single-broker стенда SCRAM здесь не нужен.
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # --------------------------------------------------------
+      # SASL / SCRAM
+      # --------------------------------------------------------
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      # SCRAM credentials для CLIENT listener.
+      # Пользователь clickhouse создаётся kafka-init.
+      KAFKA_LISTENER_NAME_CLIENT_SCRAM___SHA___256_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="clickhouse"
+        password="clickhouse-secret";
+      # --------------------------------------------------------
+      # SINGLE BROKER SETTINGS
+      # --------------------------------------------------------
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+
+  # ============================================================
+  # APICURIO REGISTRY
+  # ============================================================
+  apicurio-registry:
+    image: apicurio/apicurio-registry:3.3.1
+    container_name: apicurio-registry
+    hostname: apicurio-registry
+    depends_on:
+      kafka:
+        condition: service_started
+    ports:
+      - "8081:8080"
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.22
+    environment:
+      APICURIO_STORAGE_KIND: kafkasql
+      APICURIO_KAFKASQL_BOOTSTRAP_SERVERS: kafka:29093
+      APICURIO_KAFKASQL_TOPIC: kafkasql-journal
+      # Kafka SASL/SCRAM
+      APICURIO_KAFKA_COMMON_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      APICURIO_KAFKA_COMMON_SASL_MECHANISM: SCRAM-SHA-256
+      APICURIO_KAFKA_COMMON_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="clickhouse"
+        password="clickhouse-secret";
+
+  # ============================================================
+  # KAFKA UI
+  # ============================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    hostname: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    networks:
+      clickhouse-network:
+        ipv4_address: 172.23.0.23
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29093
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.scram.ScramLoginModule required
+        username="clickhouse"
+        password="clickhouse-secret";
+
+
+networks:
+  clickhouse-network:
+    name: clickhouse-network
+    ipam:
+      config:
+        - subnet: 172.23.0.0/24

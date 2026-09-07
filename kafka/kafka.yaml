@@ -1,0 +1,5 @@
+kafka:
+  security_protocol: sasl_plaintext
+  sasl_mechanism: SCRAM-SHA-256
+  sasl_username: clickhouse
+  sasl_password: clickhouse-secret

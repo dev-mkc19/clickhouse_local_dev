@@ -1,0 +1,26 @@
+[project]
+name = "clickhouse-local-dev"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mikhail K", email = "mr.mkc19@hotmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "attrs>=26.1.0",
+    "authlib>=1.8.0",
+    "cachetools>=7.1.8",
+    "certifi>=2026.7.22",
+    "confluent-kafka>=2.15.0",
+    "fastavro>=1.12.2",
+    "httpx>=0.28.1",
+    "httpx2>=2.12.0",
+]
+
+[project.scripts]
+clickhouse-local-dev = "clickhouse_local_dev:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

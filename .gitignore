@@ -1,1 +1,3 @@
 clickhouse0*/
+.venv
+__pycache__

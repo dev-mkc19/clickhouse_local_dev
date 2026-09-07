@@ -29,12 +29,53 @@ make start
 
 Containers will be available in docker network `172.23.0.0/24`
 
-| Container    | Address
-| ------------ | -------
-| zookeeper    | 172.23.0.10
-| clickhouse01 | 172.23.0.11
-| clickhouse02 | 172.23.0.12
-| clickhouse03 | 172.23.0.13
+| Container         | Address
+| ----------------- | -------
+| zookeeper         | 172.23.0.10
+| clickhouse01      | 172.23.0.11
+| clickhouse02      | 172.23.0.12
+| clickhouse03      | 172.23.0.13
+| zookeeper-kafka   | 172.23.0.20
+| kafka             | 172.23.0.21
+| apicurio-registry | 172.23.0.22
+| kafka-ui          | 172.23.0.23
+
+
+## Kafka (optional)
+
+Kafka is a separate compose stack and joins the same `clickhouse-network`.
+ClickHouse stays in `docker-compose.yml`; Kafka/SASL/Apicurio/UI live in `docker-compose.kafka.yml`.
+
+Start the ClickHouse cluster first, then Kafka:
+
+```sh
+make start
+make kafka-start
+```
+
+`make kafka-start` brings up Kafka, ZooKeeper, Apicurio Registry, Kafka UI.
+
+Host endpoints:
+
+| Service           | URL
+| ----------------- | ---
+| Kafka (producer)  | `127.0.0.1:9092` (PLAINTEXT)
+| Kafka UI          | http://localhost:8080
+| Apicurio Registry | http://localhost:8081
+
+From ClickHouse containers use SASL listener `kafka:29093` and schema registry `http://apicurio-registry:8080/apis/ccompat/v7`.
+
+Produce a test Avro event from the host:
+
+```sh
+python kafka/producer.kafka.avro.py
+```
+
+Then check ingestion:
+
+```sql
+SELECT * FROM test.analytics_logs_one_table;
+```
 
 
 Run single command, and it will copy migration.sh script inside a docker compose and run it.
@@ -127,7 +168,13 @@ make stop
 
 ## Teardown
 
-Stop and remove containers
+Stop and remove containers (ClickHouse and Kafka)
 ```sh
 make down
+```
+
+Stop only Kafka without removing the ClickHouse cluster:
+```sh
+make kafka-stop
+docker-compose -f docker-compose.kafka.yml down
 ```
