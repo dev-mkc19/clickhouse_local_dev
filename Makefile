@@ -52,7 +52,7 @@ kafka-stop:
 	docker-compose -f docker-compose.kafka.yml stop
 
 .PHONY: stop
-stop:
+stop: kafka-stop
 	docker-compose stop
 
 .PHONY: down
