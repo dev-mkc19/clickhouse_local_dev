@@ -1,0 +1,694 @@
+# Конфиг загрузки sources для локального ClickHouse (make migrate).
+#
+# modes:
+#   full         — вся таблица (справочники); safety-cap если > max_bytes
+#   incremental  — фильтр по date_col (from / days), затем LIMIT
+#   sample       — LIMIT без даты
+#   skip         — не создавать / не грузить
+#
+# Приоритет нижней границы даты:
+#   1) from + days → max(from, today - days)
+#   2) from
+#   3) days → today - days
+#   4) defaults.from / LOAD_FROM
+#
+# Лимит объёма для incremental/sample (и safety для огромных full):
+#   min(max_rows, floor(max_bytes / bytes_per_row))
+
+defaults:
+  mode: sample
+  max_rows: 1000000
+  max_bytes_mb: 400
+  days: 7
+  sample_limit: 10000
+  # from: "2026-10-01"   # раскомментируй или задай LOAD_FROM=YYYY-MM-DD
+
+# dbt ls selector (можно переопределить env DBT_SELECT)
+# source:* — все sources проекта; "+model_name" — только upstream конкретной модели
+dbt_select: "source:*"
+
+tables:
+  # ---------- skip ----------
+  elementary.dbt_models: { mode: skip }
+  raw_superset.ab_user: { mode: skip }
+  raw_superset.ab_role: { mode: skip }
+  raw_superset.ab_user_role: { mode: skip }
+  raw_superset.dashboards: { mode: skip }
+  raw_superset.slices: { mode: skip }
+  raw_superset.dashboard_slices: { mode: skip }
+  raw_superset.tables: { mode: skip }
+  raw_superset.tables_source: { mode: skip }
+  raw_superset.ab_view_menu: { mode: skip }
+  raw_superset.ab_permission_view: { mode: skip }
+  raw_superset.ab_permission_view_role: { mode: skip }
+  raw_superset.logs: { mode: skip }
+  flipt_analytics.flipt_counter_analytics: { mode: skip }
+  bi_views.detail_orders_tenders: { mode: skip }
+  bi_views_sensitive_data.detail_orders_tenders: { mode: skip }
+
+  # ---------- analytics ----------
+  analytics.tbl_city_timezones: { mode: full }
+  analytics.tbl_vendor_2023: { mode: full }
+  analytics.city_data: { mode: full }
+  analytics.tbl_cities_migration_dates: { mode: full }
+  analytics.tbl_monolith_to_balance_service_mapping: { mode: full }
+  analytics.tbl_mdir_vertical_services_for_purchase: { mode: full }
+  analytics.tbl_intercity_first_dates_driver_global: { mode: full }
+  analytics.tbl_intercity_first_dates_pass_global: { mode: full }
+  analytics.tbl_delivery_first_dates_driver_global: { mode: full }
+  analytics.tbl_delivery_first_dates_pass_global: { mode: full }
+  analytics.tbl_incity_first_dates_driver_global: { mode: full }
+  analytics.tbl_incity_first_dates_pass_global: { mode: full }
+  analytics.tbl_dsh_incity_monitoring_installs: { mode: sample }
+  analytics.tbl_driver_acqusition_retention_daily: { mode: sample }
+  analytics.tbl_driver_acqusition_retention_weekly: { mode: sample }
+  analytics.tbl_fct_user_transaction: { mode: sample }
+  analytics.tbl_fct_user_transaction_test: { mode: sample }
+  analytics.tbl_fct_user_balance: { mode: sample }
+
+  # ---------- ods_static ----------
+  ods_static.geo_point_distance_fraud:
+    mode: incremental
+    date_col: created_date_order_part
+    days: 7
+
+  # ---------- raw_spreadsheet ----------
+  raw_spreadsheet.company_fot_expences_mapping: { mode: full }
+  raw_spreadsheet.company_fot_expences_mapping_pl: { mode: full }
+  raw_spreadsheet.company_fot_expences_mapping_pl_kz: { mode: full }
+  raw_spreadsheet.company_mm_plan_monthly_ridehailing: { mode: full }
+  raw_spreadsheet.company_mm_plan_monthly_delivery: { mode: full }
+  raw_spreadsheet.company_mm_plan_monthly_dostavkee: { mode: full }
+  raw_spreadsheet.company_mm_plan_monthly_intercity: { mode: full }
+  raw_spreadsheet.marketing_monthly_plan_city: { mode: full }
+  raw_spreadsheet.partner_spent_city: { mode: full }
+  raw_spreadsheet.partner_spent: { mode: full }
+  raw_spreadsheet.supply_demand_budget_finance_cities: { mode: full }
+  raw_spreadsheet.supply_demand_budget_ops: { mode: full }
+  raw_spreadsheet.supply_demand_budget_finance: { mode: full }
+  raw_spreadsheet.gd2_city_rules_segments: { mode: full }
+
+  # ---------- raw_indriver dims ----------
+  raw_indriver.tbl_city: { mode: full }
+  raw_indriver.tbl_region: { mode: full }
+  raw_indriver.tbl_country: { mode: full }
+  raw_indriver.tbl_carbrand: { mode: full }
+  raw_indriver.tbl_carmodel: { mode: full }
+  raw_indriver.tbl_carmodel_city: { mode: full }
+  raw_indriver.tbl_order_type: { mode: full }
+  raw_indriver.tbl_order_type_city: { mode: full }
+  raw_indriver.tbl_order_type_city_settings: { mode: full }
+  raw_indriver.tbl_reason: { mode: full }
+  raw_indriver.tbl_vendor: { mode: full }
+  raw_indriver.tbl_withdrawal_provider: { mode: full }
+  raw_indriver.tbl_withdrawal_provider_park: { mode: full }
+  raw_indriver.tbl_ability: { mode: full }
+  raw_indriver.tbl_taxopark: { mode: full }
+  raw_indriver.tbl_taxopark_city: { mode: full }
+  raw_indriver.tbl_taxopark_actual: { mode: full }
+  raw_indriver.tbl_me_incentives_driver_rub_bonus_campaign: { mode: full }
+  raw_indriver.currency_by_date: { mode: full }
+  raw_indriver.company_budget: { mode: full }
+
+  # ---------- raw_indriver entities ----------
+  raw_indriver.tbl_user: { mode: sample }
+  raw_indriver.tbl_user_hist: { mode: sample }
+  raw_indriver.tbl_user_option: { mode: sample }
+  raw_indriver.tbl_user_license: { mode: sample }
+  raw_indriver.tbl_user_payment_method: { mode: sample }
+  raw_indriver.tbl_driver_balance: { mode: sample }
+  raw_indriver.tbl_taxopark_driver: { mode: sample }
+  raw_indriver.tbl_verifyrequest: { mode: sample }
+  raw_indriver.tbl_ban:
+    mode: incremental
+    date_col: created
+    days: 30
+  raw_indriver.tbl_user_bonus:
+    mode: incremental
+    date_col: created_at
+    days: 7
+
+  # ---------- raw_indriver facts ----------
+  raw_indriver.tbl_order:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_order_log:
+    mode: incremental
+    date_col: created
+    days: 3
+  raw_indriver.tbl_order_bid:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_offer:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_tender:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_taxopark_order:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_taxopark_purchase:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_purchase:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_purchase_detail:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_indriver.tbl_payment:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_payment_transaction:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_indriver.tbl_payment_transaction_log:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_indriver.tbl_driver_balance_log:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_indriver.tbl_ability_log:
+    mode: incremental
+    date_col: created
+    days: 3
+  raw_indriver.tbl_usernotifylog:
+    mode: incremental
+    date_col: created
+    days: 3
+  raw_indriver.tbl_smartnotif:
+    mode: incremental
+    date_col: created
+    days: 3
+  raw_indriver.tbl_messages:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_indriver.tbl_chats:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_indriver.tbl_appeal:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_indriver.tbl_dotation_order:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_indriver.ml_price_order_status:
+    mode: incremental
+    date_col: order_created_timestamp
+    days: 3
+  raw_indriver.tbl_me_incentives_driver_rub_bonus_campaign_audit:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_indriver.company_fot:
+    mode: incremental
+    date_col: doc_created_date
+    days: 90
+  raw_indriver.company_expenses:
+    mode: incremental
+    date_col: pay_date
+    days: 90
+  raw_indriver.company_income: { mode: sample }
+  raw_indriver.company_spends: { mode: sample }
+  raw_indriver.company_return_income: { mode: sample }
+  raw_indriver.company_transactions:
+    mode: incremental
+    date_col: period
+    days: 90
+  raw_indriver.company_transactions_kz:
+    mode: incremental
+    date_col: period
+    days: 90
+  raw_indriver.company_transaction_income:
+    mode: incremental
+    date_col: period
+    days: 90
+  raw_indriver.company_transactions_income_kz:
+    mode: incremental
+    date_col: period
+    days: 90
+
+  # ---------- raw_dostavkee ----------
+  raw_dostavkee.city: { mode: full }
+  raw_dostavkee.category: { mode: full }
+  raw_dostavkee.company_category: { mode: full }
+  raw_dostavkee.cancel_reason: { mode: full }
+  raw_dostavkee.drivee_cancel_reason: { mode: full }
+  raw_dostavkee.company: { mode: full }
+  raw_dostavkee.employee: { mode: full }
+  raw_dostavkee.employee_limit: { mode: full }
+  raw_dostavkee.user_company: { mode: full }
+  raw_dostavkee.company_address: { mode: full }
+  raw_dostavkee.user: { mode: sample }
+  raw_dostavkee.address: { mode: sample }
+  raw_dostavkee.point: { mode: sample }
+  raw_dostavkee.external_address: { mode: sample }
+  raw_dostavkee.orders:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.drivee_order:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.external_order:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.ride_order:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.order_log:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_dostavkee.order_refund:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.order_dotation:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.payment:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.transaction:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.charge:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.commission:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.income:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.corp_charge:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.corp_card_charge:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.corp_commission:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.corp_income:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_dostavkee.company_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_dostavkee.external_company_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+
+  # ---------- raw_poputkee ----------
+  raw_poputkee.cities: { mode: full }
+  raw_poputkee.regions: { mode: full }
+  raw_poputkee.roles: { mode: full }
+  raw_poputkee.car_brands: { mode: full }
+  raw_poputkee.car_models: { mode: full }
+  raw_poputkee.car_colors: { mode: full }
+  raw_poputkee.user_roles: { mode: full }
+  raw_poputkee.users: { mode: sample }
+  raw_poputkee.user_datas: { mode: sample }
+  raw_poputkee.cars: { mode: sample }
+  raw_poputkee.orders:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_poputkee.trips:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_poputkee.chats:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_poputkee.chat_messages:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_poputkee.chat_users:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_poputkee.chat_message_views:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_poputkee.user_ratings:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_poputkee.user_app_versions:
+    mode: incremental
+    date_col: created_at
+    days: 7
+
+  # ---------- raw_taxoparkee ----------
+  raw_taxoparkee.city: { mode: full }
+  raw_taxoparkee.company: { mode: full }
+  raw_taxoparkee.company_target: { mode: full }
+  raw_taxoparkee.company_target_milestone: { mode: full }
+  raw_taxoparkee.user: { mode: sample }
+  raw_taxoparkee.user_request:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_taxoparkee.recruiter_new_driver:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_taxoparkee.recruiter_company_driver:
+    mode: incremental
+    date_col: created_at
+    days: 7
+
+  # ---------- raw_payment ----------
+  raw_payment.payment_provider: { mode: full }
+  raw_payment.account: { mode: sample }
+  raw_payment.user_payment_method: { mode: sample }
+  raw_payment.payment:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_payment.payment_transaction:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_payment.payment_transaction_log:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_payment.driver_topup_payment:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_payment.outbox_event:
+    mode: incremental
+    date_col: created_at
+    days: 3
+
+  # ---------- raw_review ----------
+  raw_review.review_tag: { mode: full }
+  raw_review.review:
+    mode: incremental
+    date_col: created_at
+    days: 7
+  raw_review.review_tag_link:
+    mode: incremental
+    date_col: created_at
+    days: 7
+
+  # ---------- raw_watchdocs ----------
+  raw_watchdocs.service: { mode: full }
+  raw_watchdocs.staff: { mode: full }
+  raw_watchdocs.recruiter: { mode: full }
+  raw_watchdocs.transport: { mode: full }
+  raw_watchdocs.document: { mode: full }
+  raw_watchdocs.document_object: { mode: full }
+  raw_watchdocs.request_reasons: { mode: full }
+  raw_watchdocs.user_status:
+    mode: incremental
+    date_col: create_date
+    days: 30
+  raw_watchdocs.user_request:
+    mode: incremental
+    date_col: create_date
+    days: 7
+  raw_watchdocs.user_request_log:
+    mode: incremental
+    date_col: create_date
+    days: 3
+  raw_watchdocs.document_data:
+    mode: incremental
+    date_col: create_date
+    days: 7
+  raw_watchdocs.document_filling_log:
+    mode: incremental
+    date_col: user_request_create_date
+    days: 3
+  raw_watchdocs.document_sent:
+    mode: incremental
+    date_col: send_date
+    days: 7
+  raw_watchdocs.document_sent_stages: { mode: sample }
+  raw_watchdocs.transport_data:
+    mode: incremental
+    date_col: create_date
+    days: 7
+  watchdocs_mysql_remote.document: { mode: skip }
+
+  # ---------- raw_webim ----------
+  raw_webim.tbl_departments: { mode: full }
+  raw_webim.tbl_operators: { mode: full }
+  raw_webim.tbl_chats:
+    mode: incremental
+    date_col: ds_dt_part
+    days: 7
+  raw_webim.tbl_messages:
+    mode: incremental
+    date_col: created_at
+    days: 3
+
+  # ---------- raw_appsflyer ----------
+  raw_appsflyer.sessions:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.clicks:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.clicks_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.impressions:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.impressions_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.appsflyer_installs:
+    mode: incremental
+    date_col: event_time
+    days: 7
+  raw_appsflyer.appsflyer_inapps:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.appsflyer_inapps_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.conversions_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 7
+  raw_appsflyer.end_user_events:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer.website_events:
+    mode: incremental
+    date_col: event_time
+    days: 3
+
+  # ---------- raw_appsflyer_dealee ----------
+  raw_appsflyer_dealee.clicks:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.clicks_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.impressions:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.impressions_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.appsflyer_installs:
+    mode: incremental
+    date_col: event_time
+    days: 7
+  raw_appsflyer_dealee.appsflyer_inapps:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.appsflyer_inapps_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 3
+  raw_appsflyer_dealee.conversions_retargeting:
+    mode: incremental
+    date_col: event_time
+    days: 7
+
+  # ---------- applogs (тяжёлые — короткий window + cap) ----------
+  app_logs.drivee_sn_waves2:
+    mode: incremental
+    date_col: time
+    days: 1
+  raw_applogs_drivee.drivee_tracks_locations:
+    mode: incremental
+    date_col: created_at
+    days: 1
+  raw_applogs_drivee.drivee_profile:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_applogs_drivee.drivee_profile_with_mode:
+    mode: incremental
+    date_col: part_dt_utc
+    days: 3
+  raw_applogs_drivee.drivee_feed_show_orders:
+    mode: incremental
+    date_col: created_at
+    days: 1
+  raw_applogs_drivee.drivee_frendi_price:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_applogs_drivee.drivee_call_voximplant:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_applogs_drivee.drivee_photocontrol_dwh:
+    mode: incremental
+    date_col: created
+    days: 7
+  raw_applogs_drivee.drivee_geo_waypoint:
+    mode: incremental
+    date_col: time
+    days: 1
+  raw_applogs_drivee.drivee_ml_price_hub:
+    mode: incremental
+    date_col: created_at_utc
+    days: 3
+  raw_applogs_drivee.drivee_sn_statuses:
+    mode: incremental
+    date_col: modified
+    days: 3
+  raw_applogs_drivee.drivee_user_bonus_deleted_log:
+    mode: incremental
+    date_col: created_at
+    days: 3
+  raw_applogs_drivee.driver_request:
+    mode: incremental
+    date_col: part_dt_utc
+    days: 3
+  raw_applogs_drivee.feed_filters_request:
+    mode: incremental
+    date_col: part_dt_utc
+    days: 3
+  raw_applogs_drivee.drivee_sn_waves2:
+    mode: incremental
+    date_col: time
+    days: 1
+  raw_applogs_dostavkee.dostavkee_recprice_calculation_log:
+    mode: incremental
+    date_col: calculation_datetime
+    days: 3
+
+  # ---------- raw_metrics_ads ----------
+  raw_metrics_ads.vk_metrics_daily:
+    mode: incremental
+    date_col: report_date
+    days: 30
+  raw_metrics_ads.yandex_metrics_daily:
+    mode: incremental
+    date_col: report_date
+    days: 30
+
+  # ---------- raw_flipt ----------
+  raw_flipt.segments: { mode: full }
+  raw_flipt.rule_segments: { mode: full }
+  raw_flipt.rollout_segments: { mode: full }
+  raw_flipt.rollout_segment_references: { mode: full }
+  raw_flipt.rollout_thresholds: { mode: full }
+  raw_flipt.flags_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_flipt.rules_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_flipt.constraints_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_flipt.distributions_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_flipt.variants_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+  raw_flipt.rollouts_hist:
+    mode: incremental
+    date_col: created_at
+    days: 30
+
+  # ---------- raw_mindbox_analytics ----------
+  raw_mindbox_analytics.folders: { mode: full }
+  raw_mindbox_analytics.tags: { mode: full }
+  raw_mindbox_analytics.mailings: { mode: full }
+  raw_mindbox_analytics.mailings_tags: { mode: full }
+  raw_mindbox_analytics.subscription_topics: { mode: full }
+  raw_mindbox_analytics.custom_fields_kinds: { mode: full }
+  raw_mindbox_analytics.ab_tests: { mode: full }
+  raw_mindbox_analytics.ab_test_variants: { mode: full }
+  raw_mindbox_analytics.segments: { mode: full }
+  raw_mindbox_analytics.segmentations: { mode: full }
+  raw_mindbox_analytics.customer_messages_statuses: { mode: sample }
+  raw_mindbox_analytics.customer_segment_history: { mode: sample }
+  raw_mindbox_analytics.external_customer_ids_history: { mode: sample }
+  raw_mindbox_analytics.merged_customers: { mode: sample }
+  raw_mindbox_analytics.scenarios_ab_test_participants: { mode: sample }
+
+  # ---------- raw_ml ----------
+  raw_ml.frendi_logs:
+    mode: incremental
+    date_col: created_at
+    days: 3

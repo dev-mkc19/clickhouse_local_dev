@@ -78,16 +78,43 @@ SELECT * FROM test.analytics_logs_one_table;
 ```
 
 
-Run single command, and it will copy migration.sh script inside a docker compose and run it.
-After that script will re-create database structure as it was in Clickhouse source system with the sample data
-of each source table in DBT project (~100 rows)
+Run single command: copies `migration.sh`, `migration.py`, `tables.yaml` into the container and loads
+dbt source tables into the local cluster.
+
 ```sh
 make migrate
 ```
 
-> [!info]
-> You can rewrite executing DBT_SOURCES var in `migration.sh` script by adding `--select <add selection>` attribute
-> and it will reduce a number of source tables used for re-creation.
+Load modes are defined in [`tables.yaml`](tables.yaml):
+
+| mode | behaviour |
+|------|-----------|
+| `full` | whole dictionary/dim table (capped if larger than `max_bytes_mb`) |
+| `incremental` | filter by `date_col` (`from` / `days`), newest rows first |
+| `sample` | `LIMIT sample_limit` (default 10k) |
+| `skip` | ignore |
+
+Defaults for fact loads: **max 1_000_000 rows and max 400 MiB** (whichever is smaller),
+estimated via `bytes_on_disk / rows` from `system.parts` on the source.
+
+Useful env vars:
+
+| var | meaning |
+|-----|---------|
+| `LOAD_FROM=YYYY-MM-DD` | global lower bound for incremental |
+| `DBT_SELECT` | override dbt ls selector (default from `tables.yaml`) |
+| `MIGRATION_MAX_ROWS` | override row cap |
+| `MIGRATION_MAX_BYTES_MB` | override size cap (MiB) |
+
+Example table entry:
+
+```yaml
+raw_indriver.tbl_order:
+  mode: incremental
+  date_col: created
+  from: "2026-10-01"   # optional
+  days: 7              # optional
+```
 
 
 Now you are ready to use sandbox. Return to your local BDT project an run `dbt run-operation create_udfs -t dev`

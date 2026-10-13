@@ -28,9 +28,11 @@ up: prepare
 
 .PHONY: migrate
 migrate:
-	docker cp ./migration.sh clickhouse01:/opt/dbt
-	docker exec clickhouse01 chmod +x /opt/dbt/migration.sh
-	docker exec clickhouse01 sh /opt/dbt/migration.sh
+	docker cp ./migration.sh clickhouse01:/opt/dbt/migration.sh
+	docker cp ./migration.py clickhouse01:/opt/dbt/migration.py
+	docker cp ./tables.yaml clickhouse01:/opt/dbt/tables.yaml
+	docker exec clickhouse01 chmod +x /opt/dbt/migration.sh /opt/dbt/migration.py
+	docker exec clickhouse01 bash /opt/dbt/migration.sh
 
 .PHONY: start 
 start: config up
