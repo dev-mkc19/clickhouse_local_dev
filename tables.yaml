@@ -17,11 +17,11 @@
 
 defaults:
   mode: sample
-  max_rows: 1000000
-  max_bytes_mb: 400
-  days: 7
+  max_rows: 500000
+  max_bytes_mb: 200
+  days: 1
   sample_limit: 10000
-  # from: "2026-10-01"   # раскомментируй или задай LOAD_FROM=YYYY-MM-DD
+  from: "2026-10-13"   # раскомментируй или задай LOAD_FROM=YYYY-MM-DD
 
 # dbt ls selector (можно переопределить env DBT_SELECT)
 # source:* — все sources проекта; "+model_name" — только upstream конкретной модели
@@ -29,22 +29,22 @@ dbt_select: "source:*"
 
 tables:
   # ---------- skip ----------
-  elementary.dbt_models: { mode: skip }
-  raw_superset.ab_user: { mode: skip }
-  raw_superset.ab_role: { mode: skip }
-  raw_superset.ab_user_role: { mode: skip }
-  raw_superset.dashboards: { mode: skip }
-  raw_superset.slices: { mode: skip }
-  raw_superset.dashboard_slices: { mode: skip }
-  raw_superset.tables: { mode: skip }
-  raw_superset.tables_source: { mode: skip }
-  raw_superset.ab_view_menu: { mode: skip }
-  raw_superset.ab_permission_view: { mode: skip }
-  raw_superset.ab_permission_view_role: { mode: skip }
+  elementary.dbt_models: { mode: full }
+  raw_superset.ab_user: { mode: full }
+  raw_superset.ab_role: { mode: full }
+  raw_superset.ab_user_role: { mode: full }
+  raw_superset.dashboards: { mode: full }
+  raw_superset.slices: { mode: full }
+  raw_superset.dashboard_slices: { mode: full }
+  raw_superset.tables: { mode: full }
+  raw_superset.tables_source: { mode: full }
+  raw_superset.ab_view_menu: { mode: full }
+  raw_superset.ab_permission_view: { mode: full }
+  raw_superset.ab_permission_view_role: { mode: full }
   raw_superset.logs: { mode: skip }
-  flipt_analytics.flipt_counter_analytics: { mode: skip }
-  bi_views.detail_orders_tenders: { mode: skip }
-  bi_views_sensitive_data.detail_orders_tenders: { mode: skip }
+  flipt_analytics.flipt_counter_analytics: { mode: sample }
+  bi_views.detail_orders_tenders: { mode: sample }
+  bi_views_sensitive_data.detail_orders_tenders: { mode: sample }
 
   # ---------- analytics ----------
   analytics.tbl_city_timezones: { mode: full }
