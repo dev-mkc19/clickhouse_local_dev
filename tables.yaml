@@ -23,9 +23,10 @@ defaults:
   sample_limit: 10000
   from: "2026-10-13"   # раскомментируй или задай LOAD_FROM=YYYY-MM-DD
 
-# dbt ls selector (можно переопределить env DBT_SELECT)
-# source:* — все sources проекта; "+model_name" — только upstream конкретной модели
-dbt_select: "source:*"
+# dbt ls selector (дефолт для make migrate)
+# Переопределение на один запуск: DBT_SELECT='source:raw_superset.*+' make migrate
+# source:* — все sources; "+model_name" — upstream конкретной модели
+dbt_select: "source:*+"
 
 tables:
   # ---------- skip ----------

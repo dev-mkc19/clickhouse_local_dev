@@ -329,7 +329,8 @@ def create_databases() -> None:
 
 
 def list_dbt_sources(dbt_select: str) -> list[tuple[str, str]]:
-    select = os.environ.get("DBT_SELECT", dbt_select)
+    # Empty DBT_SELECT (e.g. make migrate without override) → tables.yaml
+    select = (os.environ.get("DBT_SELECT") or "").strip() or dbt_select
     cmd = [
         "dbt",
         "ls",
@@ -382,6 +383,14 @@ def fetch_create_table_ddl(schema: str, table: str) -> Optional[str]:
     ddl = src_query(query, check=False, fmt="LineAsString")
     if not ddl:
         return None
+    # Ensure IF NOT EXISTS so re-runs don't fail on existing tables
+    ddl = re.sub(
+        r"^CREATE\s+TABLE\s+(?!IF\s+NOT\s+EXISTS)",
+        "CREATE TABLE IF NOT EXISTS ",
+        ddl,
+        count=1,
+        flags=re.IGNORECASE,
+    )
     # Inject ON CLUSTER after table name
     ddl = re.sub(
         r"(CREATE TABLE\s+(?:IF NOT EXISTS\s+)?[`\"']?[\w.]+[`\"']?)",
@@ -393,6 +402,14 @@ def fetch_create_table_ddl(schema: str, table: str) -> Optional[str]:
     return ddl
 
 
+def dest_table_exists(schema: str, table: str) -> bool:
+    out = dest_query(
+        f"EXISTS TABLE `{schema}`.`{table}`",
+        check=False,
+    )
+    return out.strip() == "1"
+
+
 def process_table(schema: str, table: str, cfg_root: dict[str, Any]) -> None:
     cfg = resolve_table_config(schema, table, cfg_root)
     print(f"\n=== {schema}.{table} mode={cfg.mode} ===")
@@ -401,13 +418,15 @@ def process_table(schema: str, table: str, cfg_root: dict[str, Any]) -> None:
         print("Skipped by tables.yaml")
         return
 
-    ddl = fetch_create_table_ddl(schema, table)
-    if not ddl:
-        print(f"No table info found for {schema}.{table}")
-        return
-
-    print("Creating table on target...")
-    dest_query(ddl)
+    if dest_table_exists(schema, table):
+        print("Table already exists on target — skip CREATE, load data only")
+    else:
+        ddl = fetch_create_table_ddl(schema, table)
+        if not ddl:
+            print(f"No table info found for {schema}.{table}")
+            return
+        print("Creating table on target...")
+        dest_query(ddl)
 
     try:
         sql, desc = build_insert_sql(schema, table, cfg)

@@ -32,7 +32,8 @@ migrate:
 	docker cp ./migration.py clickhouse01:/opt/dbt/migration.py
 	docker cp ./tables.yaml clickhouse01:/opt/dbt/tables.yaml
 	docker exec clickhouse01 chmod +x /opt/dbt/migration.sh /opt/dbt/migration.py
-	docker exec clickhouse01 bash /opt/dbt/migration.sh
+	# DBT_SELECT from host overrides tables.yaml; empty clears env_file value
+	docker exec -e DBT_SELECT="$(DBT_SELECT)" clickhouse01 bash /opt/dbt/migration.sh
 
 .PHONY: start 
 start: config up
